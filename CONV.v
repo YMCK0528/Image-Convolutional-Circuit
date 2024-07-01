@@ -219,12 +219,29 @@ begin
                 iaddr <= {index_Y_Before,index_X_Before};
             4'd1:
                 iaddr <= {index_Y_Before,index_X};
+            4'd2:
+                iaddr <= {index_Y_Before,index_X_After};
+            4'd3:
+                iaddr <= {index_Y,index_X_Before};
+            4'd4:
+                iaddr <= {index_Y,index_X};
+            4'd5:
+                iaddr <= {index_Y,index_X_After};
+            4'd6:
+                iaddr <= {index_Y_After,index_X_Before};
+            4'd7:
+                iaddr <= {index_Y_After,index_X};
+            4'd8:
+                iaddr <= {index_Y_After,index_X_After};
             default:
                 iaddr<=12'd0;
         endcase
     end
 end
 
+reg signed [19:0] idata_reg;
+wire signed [43:0] mul_reg;// 2^20 * 2^20 * 2^4 = 2^44  By the way 2^4 = 9 pixel
+assign mul_reg = kernel * idata_reg ;
 
 
 endmodule
