@@ -27,7 +27,7 @@ reg [2:0] csel;
 reg[3:0] current_State;
 reg[3:0] next_State;
 
-reg [5:0 ]index_X,index_Y;
+reg [5:0]index_X,index_Y;
 wire [5:0] index_X_After,index_X_Before,index_Y_After,index_Y_Before;
 
 reg [3:0] counter_add;
@@ -177,7 +177,24 @@ parameter K5 = 20'hF6E54 ;
 parameter K6 = 20'hFA6D7 ;
 parameter K7 = 20'hFC834 ;
 parameter K8 = 20'hFAC19 ;
-parameter Bias = {4'd0,20'h01310,16'd0} ;
+parameter Bias = {8'd0,20'h01310,16'd0} ;
+
+//count_add
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        counter_add<=4'd0;
+    end
+    else if (counter_add==4'd11)
+    begin
+        counter_add<=4'd0;
+    end
+    else if (current_State==READ_CONV)
+    begin
+        counter_add<= counter_add+1'd1;
+    end
+end
 
 always@(*)
 begin
@@ -242,6 +259,130 @@ end
 reg signed [19:0] idata_reg;
 wire signed [43:0] mul_reg;// 2^20 * 2^20 * 2^4 = 2^44  By the way 2^4 = 9 pixel
 assign mul_reg = kernel * idata_reg ;
+reg signed [43:0] conv_reg ;
+//conv & bias
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        conv_reg <= 44'd0;
+    end
+    else if (current_State==READ_CONV)
+    begin
+        case (counter_add)
+            4'd0://reset conv_reg
+                conv_reg<=44'd0;
+            4'd2://0
+                if (index_X !=6'd0 && index_Y != 6'd0)
+                begin
+                    conv_reg<=mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd3://1
+                if (index_Y != 6'd0)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd4://2
+                if (index_Y != 6'd0 && index_X != 6'd63)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd5://3
+                if (index_X != 6'd0)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd6://4
+                conv_reg<=conv_reg + mul_reg;
+            4'd7://5
+                if (index_X != 6'd63)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd8://6
+                if (index_X != 6'd0 && index_Y != 6'd63)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd9://7
+                if (index_Y !=6'd63)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd10://8
+                if (index_Y != 6'd63 && index_X != 6'd63)
+                begin
+                    conv_reg<=conv_reg + mul_reg;
+                end
+                else
+                    conv_reg<=conv_reg;
+            4'd11://BAIS
+                conv_reg<=conv_reg + Bias;
+            default:
+                conv_reg<=44'd0;
+        endcase
+    end
+end
+
+wire signed [20:0] relu_reg ;
+assign relu_reg = conv_reg [35:15] + 21'd1;//choose 4bit + 17bit add 1
+
+//csel
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        csel<=3'd0;
+    end
+    else if(current_State == WRITE_L0)
+    begin
+        csel <= 3'd1;
+    end
+end
+
+//crd
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        crd <= 1'd0;
+    end
+    else if (current_State == READ_CONV)
+    begin
+        crd <= 1'd1;
+    end
+    else
+        crd <= 1'd0;
+end
+
+//cwr
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        cwr <= 1'd0;
+    end
+    else if (current_State == WRITE_L0)
+    begin
+        cwr <= 1'd1;
+    end
+    else
+        cwr <= 1'd0;
+end
 
 
 endmodule
