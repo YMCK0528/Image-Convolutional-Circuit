@@ -18,7 +18,7 @@ output [2:0] csel;
 reg busy;
 reg [11:0] iaddr;
 reg crd;
-reg caddr_rd;
+reg [11:0] caddr_rd;
 reg cwr;
 reg signed [19:0] cdata_wr;
 reg [11:0]  caddr_wr;
@@ -102,6 +102,13 @@ begin
             begin
                 next_State<=READ_CONV;
             end
+        end
+        WRITE_L0:
+        begin
+            if(index_X == 6'd63 && index_Y == 6'd63)
+                next_State = READ_L0;
+            else
+                next_State = READ_CONV;
         end
 
         default:
@@ -265,6 +272,18 @@ always @(posedge clk or posedge reset)
 begin
     if (reset)
     begin
+        idata_reg <= 20'd0;
+    end
+    else
+        idata_reg <= idata;
+end
+
+
+
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
         conv_reg <= 44'd0;
     end
     else if (current_State==READ_CONV)
@@ -341,6 +360,45 @@ end
 wire signed [20:0] relu_reg ;
 assign relu_reg = conv_reg [35:15] + 21'd1;//choose 4bit + 17bit add 1
 
+
+//cdata_wr
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        cdata_wr<=20'd0;
+    end
+    else if (current_State == WRITE_L0)
+    begin
+        begin
+            if(conv_reg[43])
+                cdata_wr <= 20'd0;
+            else
+                cdata_wr <= relu_reg[20:1];
+        end
+    end
+    else
+        cdata_wr<=20'd0;
+end
+
+
+
+//caddr_wr
+always @(posedge clk or posedge reset)
+begin
+    if (reset)
+    begin
+        caddr_wr<=11'd0;
+    end
+    else if (current_State == WRITE_L0)
+    begin
+        caddr_wr<={index_Y,index_X};
+    end
+    else
+        caddr_wr<=11'd0;
+end
+
+
 //csel
 always @(posedge clk or posedge reset)
 begin
@@ -382,6 +440,21 @@ begin
     end
     else
         cwr <= 1'd0;
+end
+
+//csel
+always@(posedge clk or posedge reset)
+begin
+    if(reset)
+        csel <=3'd0;
+    else if(next_State == WRITE_L1)
+        csel <= 3'd3;
+    else if(current_State == WRITE_L0)
+        csel <= 3'd1;
+    else if(current_State == READ_L0)
+        csel <= 3'd1;
+    else
+        csel <= 3'd0;
 end
 
 
