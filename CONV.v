@@ -323,19 +323,19 @@ begin
     else if (current_State == READ_L0)
     begin
         case (counter_add)
-            4'd1:
+            4'd0:
             begin
                 caddr_rd<={index_Y,index_X};
             end
-            4'd2:
+            4'd1:
             begin
                 caddr_rd<={index_Y,index_X_After};
             end
-            4'd3:
+            4'd2:
             begin
                 caddr_rd<={index_Y_After,index_X};
             end
-            4'd4:
+            4'd3:
             begin
                 caddr_rd<={index_Y_After,index_X_After};
             end
@@ -471,6 +471,22 @@ begin
                 cdata_wr <= 20'd0;
             else
                 cdata_wr <= relu_reg[20:1];
+        end
+    end
+    else if (current_State == READ_L0)
+    begin
+        if (counter_add==4'd1)
+        begin
+            cdata_wr<= caddr_rd;
+        end
+        else
+        begin
+            if (cdata_wr<caddr_rd)
+            begin
+                cdata_wr<= caddr_rd;
+            end
+            else
+                cdata_wr<=cdata_wr;
         end
     end
     else
