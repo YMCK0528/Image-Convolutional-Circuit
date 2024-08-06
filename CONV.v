@@ -477,20 +477,20 @@ begin
     begin
         if (counter_add==4'd1)
         begin
-            cdata_wr<= caddr_rd;
+            cdata_wr<= cdata_rd;
         end
         else
         begin
-            if (cdata_wr<caddr_rd)
+            if (cdata_wr<cdata_rd)
             begin
-                cdata_wr<= caddr_rd;
+                cdata_wr<= cdata_rd;
             end
             else
                 cdata_wr<=cdata_wr;
         end
     end
     else
-        cdata_wr<=20'd0;
+        cdata_wr<=cdata_wr;
 end
 
 //caddr_wr
@@ -504,8 +504,12 @@ begin
     begin
         caddr_wr<={index_Y,index_X};
     end
+    else if (current_State == WRITE_L1)
+    begin
+        caddr_wr<={index_Y[5:1],index_X[5:1]};
+    end
     else
-        caddr_wr<=11'd0;
+        caddr_wr<=caddr_wr;
 end
 
 //crd
@@ -536,7 +540,7 @@ begin
     else if(current_State == READ_L0)
         csel <= 3'd1;
     else
-        csel <= 3'd0;
+        csel <= csel;
 end
 
 
